@@ -1,0 +1,11 @@
+description "Consul"
+author "Hashicorp (w/ modifications)"
+
+start on (runlevel [345] and started network)
+stop on (runlevel [!345] and stopping network)
+
+respawn
+
+pre-start exec su -s /bin/sh -c 'exec "$0" "$@"' consul -- /usr/bin/generateConsulConfig.sh
+
+exec su -s /bin/sh -c 'exec "$0" "$@"' consul -- /usr/bin/consul agent -config-dir=/etc/consul/

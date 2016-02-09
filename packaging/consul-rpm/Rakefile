@@ -1,0 +1,74 @@
+NAME = 'consul-aws'
+VERSION = '0.6.3'
+EPOCH = VERSION.gsub(/[^0-9]/, '').gsub(/^0+/, '')
+PKG_ITER = "0"
+BUILD_DIR = './build'
+DISTRO_TAG = "amzn1"
+VENDOR = 'HashiCorp'
+MAINTAINER = 'Operations Workshop'
+ABSOLUTE_BUILD_DIR = File.expand_path(BUILD_DIR)
+BIN_ZIPNAME = "consul_#{VERSION}_linux_amd64.zip"
+WEB_ZIPNAME = "consul_#{VERSION}_web_ui.zip"
+BIN_URL = "https://releases.hashicorp.com/consul/#{VERSION}/#{BIN_ZIPNAME}"
+WEB_URL = "https://releases.hashicorp.com/consul/#{VERSION}/#{WEB_ZIPNAME}"
+
+task :clean do
+  sh %{ rm -rf *.zip }
+  sh %{ rm -rf executable/ webui/ }
+  sh %{ rm -rf #{BUILD_DIR} }
+end
+
+task :download_unpack do
+  sh %{ curl -L -O #{BIN_URL} }
+  sh %{ curl -L -O #{WEB_URL} }
+  sh %{ unzip -d executable #{BIN_ZIPNAME} }
+  sh %{ unzip -d webui #{WEB_ZIPNAME} }
+end
+
+task :build do 
+  sh %{ mkdir -p #{BUILD_DIR} }
+  sh %{ mkdir -p #{BUILD_DIR}/usr/bin }
+  sh %{ mkdir -p #{BUILD_DIR}/var/lib/consul }
+  sh %{ mkdir -p #{BUILD_DIR}/var/log/consul }
+  sh %{ mkdir -p #{BUILD_DIR}/etc/consul }
+  sh %{ mkdir -p #{BUILD_DIR}/usr/share }
+  sh %{ mkdir -p #{BUILD_DIR}/etc/init }
+
+  sh %{ cp executable/consul #{BUILD_DIR}/usr/bin }
+  sh %{ cp generateConsulConfig.sh #{BUILD_DIR}/usr/bin }
+  sh %{ cp getASGInstanceAddresses.sh #{BUILD_DIR}/usr/bin }
+  sh %{ chmod 755 #{BUILD_DIR}/usr/bin/consul }
+  sh %{ chmod 755 #{BUILD_DIR}/usr/bin/generateConsulConfig.sh }
+  sh %{ chmod 755 #{BUILD_DIR}/usr/bin/getASGInstanceAddresses.sh }
+  
+  sh %{ cp -r webui #{BUILD_DIR}/usr/share/consul }
+
+  sh %{ cp consul.upstart #{BUILD_DIR}/etc/init/consul.conf }
+  sh %{ chmod 755 #{BUILD_DIR}/etc/init/consul.conf }
+end
+
+task :rpm do
+  sh %{ fpm -s dir -t rpm \
+    -n #{NAME} \
+    -v #{VERSION} \
+    --iteration #{PKG_ITER} \
+    --epoch #{EPOCH} \
+    -C build \
+    -a amd64 \
+    --before-install pkg-scripts/preinst \
+    --after-install pkg-scripts/postinst \
+    --vendor "#{VENDOR}" \
+    --maintainer "#{MAINTAINER}" \
+    --description "Service discovery made easy. Distributed, highly available and datacenter-aware. Packaged for AWS." \
+    --url "https://www.consul.io" \
+    --rpm-os linux \
+    --rpm-user root \
+    --rpm-group root \
+    --rpm-use-file-permissions \
+    --rpm-dist "#{DISTRO_TAG}" \
+    --depends 'aws-cli >= 1.7.3'
+  }
+  sh %{ mv *.rpm ../packages }
+end
+
+task :default => [ :clean, :download_unpack, :build, :rpm ]

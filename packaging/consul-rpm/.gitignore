@@ -1,0 +1,5 @@
+*.zip
+build/
+executable/
+webui/
+*.rpm

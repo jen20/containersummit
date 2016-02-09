@@ -1,0 +1,4 @@
+#!/bin/sh
+
+chown -R consul:consul /etc/consul
+chown -R consul:consul /var/lib/consul
