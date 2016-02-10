@@ -3,3 +3,6 @@ run.sh
 
 terraform.tfstate
 terraform.tfstate.backup
+.swp
+.DS_Store
+.log
